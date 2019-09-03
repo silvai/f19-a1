@@ -7,7 +7,7 @@ using CSS3 transforms, and then create an animated story using a scene of DOM el
 
 ## Author
 
-**Name:  PLEASE PUT YOUR NAME HERE**
+**Name:  Isabella Silva
 
 ## Overview 
 
