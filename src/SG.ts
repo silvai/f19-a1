@@ -68,10 +68,19 @@ export class Matrix {
     
     // transpose the matrix, returning a new matrix with the result
     static transpose(m: Matrix): Matrix {
+        var e = m.elements;
+        return new Matrix(  e[0], e[1], e[2], e[3],
+                            e[4], e[5], e[6], e[7],
+                            e[8], e[9], e[10], e[11],
+                            e[12], e[13], e[14], e[15]);
     }     
 
     // copy the matrix to a new matrix
     static copy (m: Matrix): Matrix {
+        return new Matrix(  m.elements[0], m.elements[4], m.elements[8], m.elements[12],
+                            m.elements[1], m.elements[5], m.elements[9], m.elements[13],
+                            m.elements[2], m.elements[6], m.elements[10], m.elements[14],
+                            m.elements[3], m.elements[7], m.elements[11], m.elements[15]);
 	}
 
     // return a new matrix containing the identify matrix
@@ -85,39 +94,98 @@ export class Matrix {
     // create a new rotation matrix from the input vector. 
     // eu.x, eu.y, eu.z contain the rotations in degrees around the three axes. 
     // Apply the rotations in the order x, y, z.
-    static makeRotationFromEuler (eu: Vector): Matrix {        
+    static makeRotationFromEuler (eu: Vector): Matrix {     
+        var cosx = Math.cos(degToRad(eu.x));
+        var cosy = Math.cos(degToRad(eu.y));
+        var cosz = Math.cos(degToRad(eu.z));
+
+        var sinx = Math.sin(degToRad(eu.x));
+        var siny = Math.sin(degToRad(eu.y));
+        var sinz = Math.sin(degToRad(eu.z));
+
+        var rx = new Matrix( 1, 0, 0, 0,
+                             0, cosx, -sinx, 0,
+                             0, sinx, cosx, 0,
+                             0, 0, 0, 1);
+        var ry = new Matrix(cosy, 0, siny, 0, 
+                                0, 1, 0, 0, 
+                            -siny, 0, cosy, 0, 
+                                0, 0, 0, 1); 
+
+        var rz = new Matrix(cosz, -sinz, 0, 0, 
+                            sinz, cosz, 0, 0, 
+                                0, 0, 1, 0, 
+                                0, 0, 0, 1);    
+        
+        return rx.multiply(ry).multiply(rz);
+        
 	}
 
-    // not used in the example, but you might find it useful to implement this
-    // to make camera motion easier to control
-    static lookAt(eye: Vector, target: Vector, up: Vector): Matrix {
-    }
-    
     // create a new translation matrix from the input vector
     // t.x, t.y, t.z contain the translation values in each direction
     static makeTranslation(t: Vector): Matrix {
+        return new Matrix(   1, 0, 0, t.x,
+                             0, 1, 0, t.y,
+                             0, 0, 1, t.z,
+                             0, 0, 0, 1)
     }
     
     // create a new scale matrix from the input vector
     // s.x, s.y, s.z contain the scale values in each direction
 	static makeScale(s: Vector): Matrix {
+        return new Matrix(  s.x,  0, 0, 0,
+                            0,  s.y, 0, 0,
+                            0,  0, s.z, 0,
+                            0,  0,  0,  1)
     }
         
     // compose transformations with multiplication.  Multiply this * b, 
     // returning the result in a new matrix
+
+            // a                    //b                
+    // |0   4   8   12       |0   4   8   12        r0 = a0b0 + a4b1 + a8b2 + a12b3      
+    // |1   5   9   13       |1   5   9   13    
+    // |2   6   10  14       |2   6   10  14
+    // |3   7   11  15       |3   7   11  15
+
     multiply (b: Matrix ): Matrix {
-	}
-    
-    // get the translation/positional componenet out of the matrix
-    getPosition(): Vector {
+        var e = this.elements;
+        var a = b.elements;
+        return new Matrix(  e[0]*a[0] + e[4]*a[1] + e[8]*a[2] + e[12]*a[3],
+                            e[0]*a[4] + e[4]*a[5] + e[8]*a[6] + e[12]*a[7],
+                            e[0]*a[8] + e[4]*a[9] + e[8]*a[10]+ e[12]*a[11],
+                            e[0]*a[12]+ e[4]*a[13]+ e[8]*a[14]+ e[12]*a[15],
+
+                            e[1]*a[0] + e[5]*a[1] + e[9]*a[2] + e[13]*a[3],
+                            e[1]*a[4] + e[5]*a[5] + e[9]*a[6] + e[13]*a[7],
+                            e[1]*a[8] + e[5]*a[9] + e[9]*a[10]+ e[13]*a[11],
+                            e[1]*a[12]+ e[5]*a[13]+ e[9]*a[14]+ e[13]*a[15],
+
+                            e[2]*a[0] + e[6]*a[1] + e[10]*a[2] + e[14]*a[3],
+                            e[2]*a[4] + e[6]*a[5] + e[10]*a[6] + e[14]*a[7],
+                            e[2]*a[8] + e[6]*a[9] + e[10]*a[10]+ e[14]*a[11],
+                            e[2]*a[12]+ e[6]*a[13]+ e[10]*a[14]+ e[14]*a[15],
+
+                            e[3]*a[0] + e[7]*a[1] + e[11]*a[2] + e[15]*a[3],
+                            e[3]*a[4] + e[7]*a[5] + e[11]*a[6] + e[15]*a[7],
+                            e[3]*a[8] + e[7]*a[9] + e[11]*a[10]+ e[15]*a[11],
+                            e[3]*a[12]+ e[7]*a[13]+ e[11]*a[14]+ e[15]*a[15]);
     }
-    
+
+
+    // get the translation/positional component out of the matrix
+    getPosition(): Vector {
+        return new Vector(this.elements[12], this.elements[13], this.elements[14])
+    }
     // get the x, y and z vectors out of the rotation part of the matrix
     getXVector(): Vector {
+        return Vector.norm(new Vector(this.elements[0], this.elements[1], this.elements[2]))
     }
     getYVector(): Vector {
+        return Vector.norm(new Vector(this.elements[4], this.elements[5], this.elements[6]))
     }
     getZVector(): Vector {
+        return Vector.norm(new Vector(this.elements[8], this.elements[9], this.elements[10]))
     }
     
     // utility if you want to print it out
@@ -176,7 +244,7 @@ export class Thing {
         }
         c.parent = this;
     }    
-    remove(c: Thing) {        
+    remove(c: Thing) {
 		var index = this.children.indexOf( c );
 
 		if ( index !== - 1 ) {
@@ -187,13 +255,37 @@ export class Thing {
 
     // compute transform from position * rotation * scale and inverseTransform from their inverses 
     computeTransforms() {
-    }    
-        
+        var pos = Matrix.makeTranslation(this.position)
+        var sca = Matrix.makeScale(this.scale)
+        // this.transform = pos.multiply(this.rotation.multiply(sca))
+        this.transform = sca.multiply(this.rotation.multiply(pos));
+
+        var invpos = pos
+        invpos.elements[12] = -invpos.elements[12]
+        invpos.elements[13] = -invpos.elements[13]
+        invpos.elements[14] = -invpos.elements[14]
+
+        var invsca = sca
+        invsca.elements[0] = 1/invsca.elements[0]
+        invsca.elements[5] = 1/invsca.elements[5]
+        invsca.elements[10] = 1/invsca.elements[10]
+
+        var invrot = Matrix.transpose(this.rotation)
+
+        // this.inverseTransform = invsca.multiply(invrot.multiply(invpos))
+        this.inverseTransform = invpos.multiply(invrot.multiply(invsca));
+    }
+    
     // traverse the graph, executing the provided callback on this node and it's children
     // execute the callback before traversing the children
 	traverse ( callback: (obj: Thing ) => void ) {
-	}
-    
+        callback(this)
+        if (this.children.length > 0) {
+            this.children.forEach(c => {
+                callback(c)
+            });
+        }
+    }
 }
 
 // The Thing that puts something on the screen is the HTMLDivThing.    
@@ -220,9 +312,15 @@ export class Camera extends Thing {
     // get the focal length (distance from the viewplane) for a window of a specified
     // height and the camera's fovy    
     getFocalLength (height: number): number {
+        var angle = this.fovy / 2;
+        var h = height / 2
+        var a = Math.tan(degToRad(angle))
+        return (h / a)
     }
 }
- 
+
+
+
 // A scene!
 export class Scene {
     world: Thing;
@@ -232,7 +330,8 @@ export class Scene {
     private domElement: HTMLDivElement;
     private width: number;
     private height: number;
-                
+    private windowTransform: string;
+
     constructor(public container: HTMLDivElement) {
         this.world = new Thing();
         this.camera = null;
@@ -243,7 +342,7 @@ export class Scene {
         // domElement; otherwise, div's can go outside of it's boundaries (useful for 
         // debugging!)
 
-        //this.domElement.style.overflow = 'hidden';
+        this.domElement.style.overflow = 'hidden';
 
         // set the transform-style to "preserve-3d" so the 3D values inherit
         this.domElement.style.transformStyle = "preserve-3d";
@@ -261,16 +360,20 @@ export class Scene {
         // CSS uses a weird +y is DOWN coordinate frame, so we're going to
         // scale by -1 in Y in each of the elements, and then undo that scale here.
         // By doing this, all of our transformations can by in the more common
-        // +1 is UP coordinate frame 
-        this.domElement.style.transform = "matrix3d(1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1)"; 
+        // +1 is UP coordinate frame.
+        // We'll also translate to the center of the viewport (CSS coords are now in the
+        // lower left)
+        this.windowTransform = "matrix3d(1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1)" +
+            " translate3d(" + this.width/2 + 'px, ' + this.height/2 + 'px, 0px)'; 
     }
     
     // convenience function provided so you don't have to fight with this peculiarity of CSS.  
-    // we invert Y here, as described above
+    // we invert Y here, as described above.  We also translate the DIV so it's center is
+    // at the origin instead of it's lower left corner.
     getObjectCSSMatrix( m: Matrix ): string {
 		var elements = m.elements;
 
-		return 'matrix3d(' +
+		return 'translate3d(-50%, -50%, 0) matrix3d(' +
 			epsilon( elements[ 0 ]  ) + ',' +
 			epsilon( elements[ 1 ]  ) + ',' +
 			epsilon( elements[ 2 ]  ) + ',' +
@@ -290,31 +393,75 @@ export class Scene {
 		')';
 	};
 
-    // the render function.
-    //
     // In here, you should:
     // - update all the Things' internal matrices
     // - update all the Things' worldTransforms
     // - find the Camera and save it, and figure out it's inverse transformation to the root
-    // - set the perspective on this.domElement from the focalLength, as follows (assuming
-    //   focallength is a number):
-    //         this.domElement.style.perspective 
-    //                = focalLength.toString() + "px";
+    // - set the perspective on this.container and add a translation to move the camera to it's origin, 
+    //   both based on the focalLength, as follows:
+    //      var focalLength = this.camera.getFocalLength(this.height).toString();
+    //      this.container.style.perspective = focalLength + "px";
+    //      this.domElement.style.transform = "translate3d(0px,0px," + focalLength + "px)" + this.windowTransform;
     // - for each object, figure out the entire transformation to that object
     //   (including the inverse camera transformation). 
     // - add the DIV's in the HTMLDivThings directly to this.domElement (do not use a
     //   heirarchy) and set the transformation as follows:
     //        const transformStr = this.getObjectCSSMatrix(m);
     //        obj.div.style.transform = transformStr; 
-    //
     // hint: you will need to traverse the graph more than once to do all of this.
-    
+
     render() {  
         // here is an example of declaring a function inline and calling the traverse method 
-        // to walk through the graph.   
-        var updateMatricies = (obj: Thing) => {
+        // to walk through the graph.
+        var updateMatrices = (obj: Thing) => {
+            obj.computeTransforms()
+            if (obj.parent) {
+                obj.worldTransform = obj.parent.worldTransform.multiply(obj.transform)
+                // obj.worldTransform = obj.parent.transform.multiply(obj.transform)
+            } else {
+                obj.worldTransform = obj.transform
+            }
+            if (obj instanceof Camera) {
+                this.camera = obj
+            }
         }
-        this.world.traverse(updateMatricies);
+
+        this.camera = null
+        // this.world.traverse(updateMatrices);
+        let temp = <Camera | null> this.camera;
+        this.camera = temp
+        if (this.camera && this.camera.parent) {
+            var cwit = this.camera.inverseTransform;
+            let curr = this.camera.parent;
+            while (curr.parent) {
+                cwit = cwit.multiply(curr.inverseTransform)
+                curr = curr.parent
+            }
+            this.camera.worldInverseTransform = cwit
+            var focalLength = this.camera.getFocalLength(this.height);
+            this.container.style.perspective = focalLength + "px";
+            this.domElement.style.transform = "translate3d(0px,0px," + focalLength + "px)" + this.windowTransform;
+        }
+
+
+        var cameraPerspec = (c: Thing) => {
+            if (this.camera) {
+                var thing = this.camera.worldInverseTransform.multiply(c.worldTransform);
+                const transformStr = this.getObjectCSSMatrix(thing);
+                // const transformStr = this.getObjectCSSMatrix(this.camera.worldInverseTransform.multiply(c.worldTransform));
+                // var obj = new HTMLDivThing(this.domElement)
+                // var obj = <HTMLDivThing> c;
+                if (c instanceof HTMLDivThing) {
+                    c.div.style.transform = transformStr;
+                    this.domElement.append(c.div)
+                }
+                // obj.div.style.transform = transformStr;
+                // this.domElement.append(obj.div)
+            }
+        }
+
+        this.world.traverse(updateMatrices);
+        this.world.traverse(cameraPerspec);
 
     }
 }
