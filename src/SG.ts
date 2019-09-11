@@ -96,11 +96,12 @@ export class Matrix {
     // Apply the rotations in the order x, y, z.
     static makeRotationFromEuler (eu: Vector): Matrix {     
         var cosx = Math.cos(degToRad(eu.x));
-        var cosy = Math.cos(degToRad(eu.y));
-        var cosz = Math.cos(degToRad(eu.z));
-
         var sinx = Math.sin(degToRad(eu.x));
+
+        var cosy = Math.cos(degToRad(eu.y));
         var siny = Math.sin(degToRad(eu.y));
+
+        var cosz = Math.cos(degToRad(eu.z));
         var sinz = Math.sin(degToRad(eu.z));
 
         var rx = new Matrix( 1, 0, 0, 0,
@@ -115,9 +116,9 @@ export class Matrix {
         var rz = new Matrix(cosz, -sinz, 0, 0, 
                             sinz, cosz, 0, 0, 
                                 0, 0, 1, 0, 
-                                0, 0, 0, 1);    
+                                0, 0, 0, 1);   
         
-        return rx.multiply(ry).multiply(rz);
+        return (rx.multiply(ry)).multiply(rz);
         
 	}
 
@@ -141,13 +142,6 @@ export class Matrix {
         
     // compose transformations with multiplication.  Multiply this * b, 
     // returning the result in a new matrix
-
-            // a                    //b                
-    // |0   4   8   12       |0   4   8   12        r0 = a0b0 + a4b1 + a8b2 + a12b3      
-    // |1   5   9   13       |1   5   9   13    
-    // |2   6   10  14       |2   6   10  14
-    // |3   7   11  15       |3   7   11  15
-
     multiply (b: Matrix ): Matrix {
         var e = this.elements;
         var a = b.elements;
@@ -206,23 +200,18 @@ export class Thing {
     // the children of the node, and the parent
     children: Thing[];
     parent: Thing | null;
-    
     // store position and scale as vectors, but orientation as a matrix, since there are many
     // ways to create an orientation matrix
     position: Vector;
     rotation: Matrix;
     scale: Vector;
-    
     // the transform should be computed as position * rotation * scale, and NOT be set by the 
     // programmer who is using this library
     transform: Matrix;
-
     // inverse should be computed 
     inverseTransform: Matrix;
-
     // each node will store it's worldTransform as well as it's local transform
-    worldTransform: Matrix;
-        
+    worldTransform: Matrix;   
     constructor() {
         this.position = new Vector(0,0,0);
         this.rotation = Matrix.identity();
@@ -234,7 +223,6 @@ export class Thing {
         this.inverseTransform = Matrix.identity();
         this.worldTransform = Matrix.identity();
     }
-
     // add and remote children to this Thing.  Note that we are careful to have the parent set, and to ensure only
     // one parent has this element as a child
     add(c: Thing) {
@@ -257,32 +245,32 @@ export class Thing {
     computeTransforms() {
         var pos = Matrix.makeTranslation(this.position)
         var sca = Matrix.makeScale(this.scale)
-        // this.transform = pos.multiply(this.rotation.multiply(sca))
-        this.transform = sca.multiply(this.rotation.multiply(pos));
+        this.transform = pos.multiply(this.rotation).multiply(sca)
+        // this.transform = sca.multiply(this.rotation.multiply(pos));
 
-        var invpos = pos
+        var invpos = Matrix.copy(pos)
         invpos.elements[12] = -invpos.elements[12]
         invpos.elements[13] = -invpos.elements[13]
         invpos.elements[14] = -invpos.elements[14]
 
-        var invsca = sca
+        var invsca = Matrix.copy(sca)
         invsca.elements[0] = 1/invsca.elements[0]
         invsca.elements[5] = 1/invsca.elements[5]
         invsca.elements[10] = 1/invsca.elements[10]
 
-        var invrot = Matrix.transpose(this.rotation)
+        var invrot = Matrix.transpose(Matrix.copy(this.rotation))
 
-        // this.inverseTransform = invsca.multiply(invrot.multiply(invpos))
-        this.inverseTransform = invpos.multiply(invrot.multiply(invsca));
+        this.inverseTransform = invsca.multiply(invrot).multiply(invpos)
     }
     
     // traverse the graph, executing the provided callback on this node and it's children
     // execute the callback before traversing the children
 	traverse ( callback: (obj: Thing ) => void ) {
-        callback(this)
+        callback(this);
         if (this.children.length > 0) {
             this.children.forEach(c => {
-                callback(c)
+                c.traverse(callback);
+                // callback(c)
             });
         }
     }
@@ -297,18 +285,15 @@ export class HTMLDivThing extends Thing {
     	this.div.style.position = 'absolute';        
     }
 }
-
 // The Camera Thing.  There must be one and only one in the Scene.
 export class Camera extends Thing {
     // hint:  you will need to figure out and keep track of the inverse transform from
     // the camera up to the root of the scene.  
     worldInverseTransform: Matrix;
-    
     constructor(public fovy: number) {
         super();
 		this.worldInverseTransform = Matrix.identity();
     }
-    
     // get the focal length (distance from the viewplane) for a window of a specified
     // height and the camera's fovy    
     getFocalLength (height: number): number {
@@ -318,20 +303,15 @@ export class Camera extends Thing {
         return (h / a)
     }
 }
-
-
-
 // A scene!
 export class Scene {
     world: Thing;
     camera: Camera | null;
-    
     // internal
     private domElement: HTMLDivElement;
     private width: number;
     private height: number;
     private windowTransform: string;
-
     constructor(public container: HTMLDivElement) {
         this.world = new Thing();
         this.camera = null;
@@ -342,7 +322,7 @@ export class Scene {
         // domElement; otherwise, div's can go outside of it's boundaries (useful for 
         // debugging!)
 
-        this.domElement.style.overflow = 'hidden';
+        // this.domElement.style.overflow = 'hidden';
 
         // set the transform-style to "preserve-3d" so the 3D values inherit
         this.domElement.style.transformStyle = "preserve-3d";
@@ -366,13 +346,11 @@ export class Scene {
         this.windowTransform = "matrix3d(1,0,0,0, 0,-1,0,0, 0,0,1,0, 0,0,0,1)" +
             " translate3d(" + this.width/2 + 'px, ' + this.height/2 + 'px, 0px)'; 
     }
-    
     // convenience function provided so you don't have to fight with this peculiarity of CSS.  
     // we invert Y here, as described above.  We also translate the DIV so it's center is
     // at the origin instead of it's lower left corner.
     getObjectCSSMatrix( m: Matrix ): string {
 		var elements = m.elements;
-
 		return 'translate3d(-50%, -50%, 0) matrix3d(' +
 			epsilon( elements[ 0 ]  ) + ',' +
 			epsilon( elements[ 1 ]  ) + ',' +
@@ -392,7 +370,6 @@ export class Scene {
 			epsilon( elements[ 15 ]  ) +
 		')';
 	};
-
     // In here, you should:
     // - update all the Things' internal matrices
     // - update all the Things' worldTransforms
@@ -411,57 +388,53 @@ export class Scene {
     // hint: you will need to traverse the graph more than once to do all of this.
 
     render() {  
-        // here is an example of declaring a function inline and calling the traverse method 
-        // to walk through the graph.
         var updateMatrices = (obj: Thing) => {
             obj.computeTransforms()
             if (obj.parent) {
                 obj.worldTransform = obj.parent.worldTransform.multiply(obj.transform)
-                // obj.worldTransform = obj.parent.transform.multiply(obj.transform)
             } else {
                 obj.worldTransform = obj.transform
             }
             if (obj instanceof Camera) {
                 this.camera = obj
+                this.camera.worldInverseTransform = obj.inverseTransform;
+                var curr = this.camera.parent
+                while (curr) {
+                    this.camera.worldInverseTransform = this.camera.worldInverseTransform.multiply(curr.inverseTransform);
+                    curr = curr.parent;
+                }
+
+                var focalLength = this.camera.getFocalLength(this.height);
+                this.container.style.perspective = focalLength + "px";
+                this.domElement.style.transform = "translate3d(0px,0px," + focalLength + "px)" + this.windowTransform;
             }
         }
-
-        this.camera = null
-        // this.world.traverse(updateMatrices);
-        let temp = <Camera | null> this.camera;
-        this.camera = temp
-        if (this.camera && this.camera.parent) {
-            var cwit = this.camera.inverseTransform;
-            let curr = this.camera.parent;
-            while (curr.parent) {
-                cwit = cwit.multiply(curr.inverseTransform)
-                curr = curr.parent
-            }
-            this.camera.worldInverseTransform = cwit
-            var focalLength = this.camera.getFocalLength(this.height);
-            this.container.style.perspective = focalLength + "px";
-            this.domElement.style.transform = "translate3d(0px,0px," + focalLength + "px)" + this.windowTransform;
-        }
-
-
+        // var camSetup = (obj: Thing) => {
+        //     if(this.camera) {
+        //         this.camera.worldInverseTransform = obj.inverseTransform;
+        //         var curr = this.camera.parent
+        //         while (curr) {
+        //             this.camera.worldInverseTransform = this.camera.worldInverseTransform.multiply(curr.inverseTransform);
+        //             curr = curr.parent;
+        //         }
+        //         var focalLength = this.camera.getFocalLength(this.height);
+        //         this.container.style.perspective = focalLength + "px";
+        //         this.domElement.style.transform = "translate3d(0px,0px," + focalLength + "px)" + this.windowTransform;
+        //     }
+        // }
         var cameraPerspec = (c: Thing) => {
             if (this.camera) {
                 var thing = this.camera.worldInverseTransform.multiply(c.worldTransform);
-                const transformStr = this.getObjectCSSMatrix(thing);
-                // const transformStr = this.getObjectCSSMatrix(this.camera.worldInverseTransform.multiply(c.worldTransform));
-                // var obj = new HTMLDivThing(this.domElement)
-                // var obj = <HTMLDivThing> c;
                 if (c instanceof HTMLDivThing) {
+                    const transformStr = this.getObjectCSSMatrix(thing);
                     c.div.style.transform = transformStr;
                     this.domElement.append(c.div)
                 }
-                // obj.div.style.transform = transformStr;
-                // this.domElement.append(obj.div)
             }
         }
-
+        // camSetup();
         this.world.traverse(updateMatrices);
+        // this.world.traverse(camSetup);
         this.world.traverse(cameraPerspec);
-
     }
 }
