@@ -270,7 +270,6 @@ export class Thing {
         if (this.children.length > 0) {
             this.children.forEach(c => {
                 c.traverse(callback);
-                // callback(c)
             });
         }
     }
@@ -409,32 +408,19 @@ export class Scene {
                 this.domElement.style.transform = "translate3d(0px,0px," + focalLength + "px)" + this.windowTransform;
             }
         }
-        // var camSetup = (obj: Thing) => {
-        //     if(this.camera) {
-        //         this.camera.worldInverseTransform = obj.inverseTransform;
-        //         var curr = this.camera.parent
-        //         while (curr) {
-        //             this.camera.worldInverseTransform = this.camera.worldInverseTransform.multiply(curr.inverseTransform);
-        //             curr = curr.parent;
-        //         }
-        //         var focalLength = this.camera.getFocalLength(this.height);
-        //         this.container.style.perspective = focalLength + "px";
-        //         this.domElement.style.transform = "translate3d(0px,0px," + focalLength + "px)" + this.windowTransform;
-        //     }
-        // }
+        
         var cameraPerspec = (c: Thing) => {
             if (this.camera) {
                 var thing = this.camera.worldInverseTransform.multiply(c.worldTransform);
                 if (c instanceof HTMLDivThing) {
                     const transformStr = this.getObjectCSSMatrix(thing);
                     c.div.style.transform = transformStr;
-                    this.domElement.append(c.div)
+                    this.domElement.appendChild(c.div)
                 }
             }
         }
-        // camSetup();
+        
         this.world.traverse(updateMatrices);
-        // this.world.traverse(camSetup);
         this.world.traverse(cameraPerspec);
     }
 }
